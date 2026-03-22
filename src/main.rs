@@ -1,5 +1,4 @@
 use actix_web::{web, App, HttpServer, HttpResponse, Result};
-use actix_multipart::Multipart;
 use image::{ImageFormat, DynamicImage};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -34,19 +33,11 @@ async fn health() -> HttpResponse {
 }
 
 /// Generate thumbnail from uploaded image
-async fn generate_thumbnail(mut payload: Multipart) -> Result<HttpResponse> {
+async fn generate_thumbnail(body: web::Bytes) -> Result<HttpResponse> {
     let start = std::time::Instant::now();
     
-    // Get the first file from multipart
-    let mut image_data = Vec::new();
-    while let Ok(Some(mut field)) = payload.try_next().await {
-        while let Some(chunk) = field.try_next().await.unwrap() {
-            image_data.extend_from_slice(&chunk);
-        }
-    }
-    
-    // Load image
-    let img = match image::load_from_memory(&image_data) {
+    // Load image from bytes
+    let img = match image::load_from_memory(&body) {
         Ok(img) => img,
         Err(_) => return Ok(HttpResponse::BadRequest().body("Invalid image")),
     };
@@ -71,19 +62,11 @@ async fn generate_thumbnail(mut payload: Multipart) -> Result<HttpResponse> {
 }
 
 /// Simple resize endpoint
-async fn resize_image(mut payload: Multipart, query: web::Query<ThumbnailParams>) -> Result<HttpResponse> {
+async fn resize_image(body: web::Bytes, query: web::Query<ThumbnailParams>) -> Result<HttpResponse> {
     let start = std::time::Instant::now();
     
-    // Get the first file from multipart
-    let mut image_data = Vec::new();
-    while let Ok(Some(mut field)) = payload.try_next().await {
-        while let Some(chunk) = field.try_next().await.unwrap() {
-            image_data.extend_from_slice(&chunk);
-        }
-    }
-    
     // Load and resize image
-    let img = match image::load_from_memory(&image_data) {
+    let img = match image::load_from_memory(&body) {
         Ok(img) => img,
         Err(_) => return Ok(HttpResponse::BadRequest().body("Invalid image")),
     };
